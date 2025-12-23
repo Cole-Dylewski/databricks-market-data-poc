@@ -1,0 +1,21 @@
+# Core dependencies for Databricks Market Data POC
+# TODO: Add specific version pins as needed
+
+# Data processing
+pyspark>=3.5.0
+delta-spark>=3.0.0
+
+# HTTP requests for API calls
+requests>=2.31.0
+
+# Data manipulation
+pandas>=2.0.0
+
+# Date/time handling
+python-dateutil>=2.8.0
+
+# TODO: Add additional dependencies as you build out the project:
+# - yfinance (for Yahoo Finance integration)
+# - alpaca-trade-api (if using Alpaca)
+# - Other data source libraries
+
