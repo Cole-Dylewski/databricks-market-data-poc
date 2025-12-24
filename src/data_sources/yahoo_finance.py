@@ -1,87 +1,66 @@
 """
 Yahoo Finance data source client.
 
-Uses Yahoo Finance REST API to fetch historical stock market data.
-No API keys required - uses public endpoints.
+Uses yfinance library to fetch historical stock market data.
+No API keys required - uses public Yahoo Finance data.
 """
 
-import time
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+
+try:
+    import yfinance as yf
+    import pandas as pd
+except ImportError:
+    raise ImportError(
+        "yfinance is required but not installed. "
+        "Install it with: pip install yfinance>=0.2.0 "
+        "or in Databricks: %pip install yfinance>=0.2.0"
+    )
+
+# Verify yfinance is being used (not requests directly)
+if not hasattr(yf, 'Ticker'):
+    raise ImportError(
+        "yfinance library is not properly installed or is the wrong version. "
+        "Expected yfinance>=0.2.0 with Ticker class."
+    )
 
 from .base_client import BaseMarketDataClient
 
 
 class YahooFinanceClient(BaseMarketDataClient):
-    """Client for fetching data from Yahoo Finance REST API.
+    """Client for fetching data from Yahoo Finance using yfinance library.
     
-    Uses the public Yahoo Finance v8 chart API endpoint which requires
-    no authentication. Includes retry logic and rate limiting handling.
+    Uses the yfinance library which wraps Yahoo Finance's public API.
+    More reliable than direct REST API calls and handles rate limiting better.
+    No API keys required.
     """
 
-    BASE_URL = "https://query1.finance.yahoo.com/v8/finance/chart"
-    DEFAULT_TIMEOUT = 30
-    MAX_RETRIES = 3
-    RETRY_BACKOFF_FACTOR = 1.0
-
-    def __init__(
-        self,
-        timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = MAX_RETRIES,
-        retry_backoff: float = RETRY_BACKOFF_FACTOR,
-    ) -> None:
+    def __init__(self) -> None:
         """Initialize Yahoo Finance client.
-        
-        Args:
-            timeout: Request timeout in seconds
-            max_retries: Maximum number of retry attempts
-            retry_backoff: Backoff factor for retries (seconds)
         
         Examples:
             >>> client = YahooFinanceClient()
-            >>> client = YahooFinanceClient(timeout=60, max_retries=5)
         """
-        self.timeout = timeout
-        self.max_retries = max_retries
-        self.retry_backoff = retry_backoff
-        self.session = self._create_session()
-
-    def _create_session(self) -> requests.Session:
-        """Create requests session with retry strategy.
-        
-        Returns:
-            Configured requests Session with retry adapter
-        """
-        session = requests.Session()
-        retry_strategy = Retry(
-            total=self.max_retries,
-            backoff_factor=self.retry_backoff,
-            status_forcelist=[429, 500, 502, 503, 504],
-        )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        session.mount("http://", adapter)
-        session.mount("https://", adapter)
-        return session
+        pass
 
     def _convert_interval(self, interval: str) -> str:
-        """Convert standard interval to Yahoo Finance format.
+        """Convert standard interval to yfinance format.
         
         Args:
             interval: Standard interval (e.g., "1d", "1h", "5m")
         
         Returns:
-            Yahoo Finance compatible interval string
+            yfinance compatible interval string
         
         Examples:
             >>> client = YahooFinanceClient()
             >>> client._convert_interval("1d")
             '1d'
-            >>> client._convert_interval("1h")
-            '1h'
+            >>> client._convert_interval("5m")
+            '5m'
         """
+        # yfinance supports: 1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo
         valid_intervals = ["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "5d", "1wk", "1mo", "3mo"]
         if interval not in valid_intervals:
             return "1d"
@@ -94,7 +73,10 @@ class YahooFinanceClient(BaseMarketDataClient):
         end_time: datetime,
         interval: str = "1d",
     ) -> List[Dict[str, Any]]:
-        """Fetch bar data from Yahoo Finance.
+        """Fetch bar data from Yahoo Finance using yfinance library only.
+        
+        This method ONLY uses yfinance library - no direct REST API calls.
+        yfinance handles all HTTP requests internally.
         
         Args:
             symbol: Stock symbol (e.g., "AAPL", "MSFT")
@@ -107,7 +89,7 @@ class YahooFinanceClient(BaseMarketDataClient):
         
         Raises:
             ValueError: If symbol is empty or time range is invalid
-            ConnectionError: If API request fails after retries
+            ConnectionError: If API request fails
         
         Examples:
             >>> client = YahooFinanceClient()
@@ -125,75 +107,67 @@ class YahooFinanceClient(BaseMarketDataClient):
         if start_time >= end_time:
             raise ValueError("start_time must be before end_time")
         
-        yahoo_interval = self._convert_interval(interval)
-        period1 = int(start_time.timestamp())
-        period2 = int(end_time.timestamp())
-        
-        url = f"{self.BASE_URL}/{symbol}"
-        params = {
-            "period1": period1,
-            "period2": period2,
-            "interval": yahoo_interval,
-        }
+        yfinance_interval = self._convert_interval(interval)
         
         try:
-            response = self.session.get(url, params=params, timeout=self.timeout)
-            response.raise_for_status()
-            data = response.json()
-            return self._parse_response(symbol, data)
-        except requests.exceptions.RequestException as e:
-            raise ConnectionError(f"Failed to fetch data from Yahoo Finance: {e}") from e
+            # ONLY use yfinance - no REST API calls
+            # yfinance.Ticker() creates a ticker object
+            # ticker.history() downloads data using yfinance's internal HTTP handling
+            ticker = yf.Ticker(symbol)
+            
+            # Fetch historical data using yfinance
+            # yfinance handles all HTTP requests, retries, and rate limiting internally
+            # This is the ONLY way we fetch data - no direct REST API calls
+            df = ticker.history(
+                start=start_time,
+                end=end_time,
+                interval=yfinance_interval,
+            )
+            
+            # Convert pandas DataFrame to list of dictionaries
+            return self._dataframe_to_bars(symbol, df)
+            
+        except Exception as e:
+            error_msg = str(e)
+            # Provide clearer error messages
+            if "timeout" in error_msg.lower() or "timed out" in error_msg.lower():
+                raise ConnectionError(
+                    f"Timeout fetching data for {symbol} from Yahoo Finance via yfinance. "
+                    f"Error: {error_msg}"
+                ) from e
+            raise ConnectionError(
+                f"Failed to fetch data for {symbol} from Yahoo Finance via yfinance: {error_msg}"
+            ) from e
 
-    def _parse_response(self, symbol: str, data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Parse Yahoo Finance API response into standardized format.
+    def _dataframe_to_bars(self, symbol: str, df: pd.DataFrame) -> List[Dict[str, Any]]:
+        """Convert pandas DataFrame from yfinance to standardized bar format.
         
         Args:
             symbol: Stock symbol
-            data: Raw API response JSON
+            df: pandas DataFrame from yfinance with OHLCV data
         
         Returns:
             List of standardized bar dictionaries
-        
-        Raises:
-            ValueError: If response format is invalid
         """
-        if "chart" not in data or "result" not in data["chart"]:
-            raise ValueError("Invalid response format from Yahoo Finance API")
-        
-        results = data["chart"]["result"]
-        if not results:
+        if df.empty:
             return []
-        
-        result = results[0]
-        if "timestamp" not in result or "indicators" not in result:
-            return []
-        
-        timestamps = result["timestamp"]
-        indicators = result["indicators"]
-        
-        if "quote" not in indicators or not indicators["quote"]:
-            return []
-        
-        quote = indicators["quote"][0]
-        opens = quote.get("open", [])
-        highs = quote.get("high", [])
-        lows = quote.get("low", [])
-        closes = quote.get("close", [])
-        volumes = quote.get("volume", [])
         
         bars = []
-        for i, ts in enumerate(timestamps):
-            if closes[i] is None:
-                continue
+        for timestamp, row in df.iterrows():
+            # Handle pandas Timestamp
+            if isinstance(timestamp, pd.Timestamp):
+                bar_timestamp = timestamp.to_pydatetime()
+            else:
+                bar_timestamp = datetime.fromtimestamp(timestamp.timestamp())
             
             bars.append({
                 "symbol": symbol,
-                "timestamp": datetime.fromtimestamp(ts),
-                "open": float(opens[i]) if opens[i] is not None else closes[i],
-                "high": float(highs[i]) if highs[i] is not None else closes[i],
-                "low": float(lows[i]) if lows[i] is not None else closes[i],
-                "close": float(closes[i]),
-                "volume": int(volumes[i]) if volumes[i] is not None else 0,
+                "timestamp": bar_timestamp,
+                "open": float(row["Open"]) if pd.notna(row["Open"]) else 0.0,
+                "high": float(row["High"]) if pd.notna(row["High"]) else 0.0,
+                "low": float(row["Low"]) if pd.notna(row["Low"]) else 0.0,
+                "close": float(row["Close"]) if pd.notna(row["Close"]) else 0.0,
+                "volume": int(row["Volume"]) if pd.notna(row["Volume"]) else 0,
             })
         
         return bars

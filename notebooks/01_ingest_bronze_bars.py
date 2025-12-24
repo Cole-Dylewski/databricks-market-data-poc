@@ -149,6 +149,19 @@ print(f"Added project root to path: {project_root}")
 
 # COMMAND ----------
 
+# Install yfinance if not available (for Databricks)
+try:
+    import yfinance as yf
+except ImportError:
+    print("yfinance not found, installing...")
+    import subprocess
+    import sys
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "yfinance>=0.2.0"])
+    import yfinance as yf
+    print("yfinance installed successfully")
+
+# COMMAND ----------
+
 from src.utils import get_sp500_symbols, fetch_previous_day_5min_bars
 
 # COMMAND ----------
@@ -191,47 +204,47 @@ for symbol in debug_symbols:
 
 # COMMAND ----------
 
-# Now fetch for the sample symbols
-sample_symbols = symbols[:5]  # First 5 symbols for demo
-print(f"\nFetching 5-minute data for {len(sample_symbols)} symbols...")
-print(f"Symbols: {sample_symbols}")
-print("\nNote: Yahoo Finance may rate limit requests. The function includes")
-print("automatic delays and retries. For large batches, consider processing")
-print("in smaller chunks or adding additional delays between batches.")
-
-bars_data = fetch_previous_day_5min_bars(sample_symbols)
-
-# Display results
-for symbol in sample_symbols:
-    if symbol in bars_data and bars_data[symbol]:
-        num_bars = len(bars_data[symbol])
-        print(f"\n{symbol}: {num_bars} bars")
-        if num_bars > 0:
-            first_bar = bars_data[symbol][0]
-            last_bar = bars_data[symbol][-1]
-            print(f"  First bar: {first_bar['timestamp']} - Close: ${first_bar['close']:.2f}")
-            print(f"  Last bar: {last_bar['timestamp']} - Close: ${last_bar['close']:.2f}")
-    else:
-        print(f"\n{symbol}: No data available")
-
-# COMMAND ----------
-
-# Step 3: Summary statistics
-total_bars = sum(len(bars) for bars in bars_data.values())
-symbols_with_data = sum(1 for bars in bars_data.values() if bars)
-
-print(f"\n=== Summary ===")
-print(f"Total symbols processed: {len(sample_symbols)}")
-print(f"Symbols with data: {symbols_with_data}")
-print(f"Total bars fetched: {total_bars}")
-print(f"Average bars per symbol: {total_bars / symbols_with_data if symbols_with_data > 0 else 0:.1f}")
-
-# COMMAND ----------
-
-# TODO: Save bars_data to bronze layer (JSON files or Delta tables)
-# Example:
-# import json
-# for symbol, bars in bars_data.items():
-#     if bars:
-#         with open(f"bronze/bars/{symbol}.json", "w") as f:
-#             json.dump(bars, f, default=str)
+# # Now fetch for the sample symbols
+# sample_symbols = symbols[:5]  # First 5 symbols for demo
+# print(f"\nFetching 5-minute data for {len(sample_symbols)} symbols...")
+# print(f"Symbols: {sample_symbols}")
+# print("\nNote: Yahoo Finance may rate limit requests. The function includes")
+# print("automatic delays and retries. For large batches, consider processing")
+# print("in smaller chunks or adding additional delays between batches.")
+# 
+# bars_data = fetch_previous_day_5min_bars(sample_symbols)
+# 
+# # Display results
+# for symbol in sample_symbols:
+#     if symbol in bars_data and bars_data[symbol]:
+#         num_bars = len(bars_data[symbol])
+#         print(f"\n{symbol}: {num_bars} bars")
+#         if num_bars > 0:
+#             first_bar = bars_data[symbol][0]
+#             last_bar = bars_data[symbol][-1]
+#             print(f"  First bar: {first_bar['timestamp']} - Close: ${first_bar['close']:.2f}")
+#             print(f"  Last bar: {last_bar['timestamp']} - Close: ${last_bar['close']:.2f}")
+#     else:
+#         print(f"\n{symbol}: No data available")
+# 
+# # COMMAND ----------
+# 
+# # Step 3: Summary statistics
+# total_bars = sum(len(bars) for bars in bars_data.values())
+# symbols_with_data = sum(1 for bars in bars_data.values() if bars)
+# 
+# print(f"\n=== Summary ===")
+# print(f"Total symbols processed: {len(sample_symbols)}")
+# print(f"Symbols with data: {symbols_with_data}")
+# print(f"Total bars fetched: {total_bars}")
+# print(f"Average bars per symbol: {total_bars / symbols_with_data if symbols_with_data > 0 else 0:.1f}")
+# 
+# # COMMAND ----------
+# 
+# # TODO: Save bars_data to bronze layer (JSON files or Delta tables)
+# # Example:
+# # import json
+# # for symbol, bars in bars_data.items():
+# #     if bars:
+# #         with open(f"bronze/bars/{symbol}.json", "w") as f:
+# #             json.dump(bars, f, default=str)

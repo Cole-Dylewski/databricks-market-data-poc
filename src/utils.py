@@ -291,7 +291,7 @@ def fetch_previous_day_5min_bars(
                 interval="5m",
             )
             results[symbol] = bars
-            print(f"✓ Got {len(bars)} bars")
+            print(f"[OK] Got {len(bars)} bars")
             
             # Add delay between symbols to avoid rate limiting
             # Only delay if not the last symbol
@@ -305,8 +305,8 @@ def fetch_previous_day_5min_bars(
             if "429" in error_msg or "rate limit" in error_msg.lower() or "too many" in error_msg.lower():
                 # If rate limited, wait longer before continuing
                 wait_time = 15.0  # Wait 15 seconds on rate limit
-                print(f"✗ Rate limited")
-                print(f"  Waiting {wait_time} seconds before retrying {symbol}...")
+                print(f"[WARN] Rate limited")
+                print(f"       Waiting {wait_time} seconds before retrying {symbol}...")
                 time_module.sleep(wait_time)
                 # Try once more after waiting
                 try:
@@ -317,16 +317,16 @@ def fetch_previous_day_5min_bars(
                         interval="5m",
                     )
                     results[symbol] = bars
-                    print(f"✓ Retry successful - Got {len(bars)} bars")
+                    print(f"[OK] Retry successful - Got {len(bars)} bars")
                     # Still add delay before next symbol
                     if i < len(symbols) - 1:
                         time_module.sleep(3.0)
                     continue
                 except Exception as retry_error:
-                    print(f"✗ Retry failed: {retry_error}")
+                    print(f"[FAIL] Retry failed: {retry_error}")
                     pass  # If it still fails, continue with empty list
             else:
-                print(f"✗ Error: {error_msg[:100]}")
+                print(f"[FAIL] Error: {error_msg[:100]}")
             results[symbol] = []
             # Still add delay even on error to avoid compounding rate limits
             if i < len(symbols) - 1:
