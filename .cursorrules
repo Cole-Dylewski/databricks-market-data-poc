@@ -209,6 +209,18 @@ def test_function_name_failure() -> None:
 - Use meaningful error messages
 - Document non-obvious business logic
 
+## Git Commit Guidelines
+
+- **NEVER commit to git unless explicitly requested by the user**
+- When committing, follow these rules:
+  - Commit ALL changes (modified files, new files, etc.)
+  - **DELETE temporary files before committing:**
+    - Temporary documentation files (test_*.md, debug_*.txt, etc.)
+    - Diagnostic scripts (test_*.py files that are not part of the test suite)
+    - Testing scripts created for debugging (e.g., test_data_fetch.py, test_single_symbol.py)
+  - Only commit files that are part of the permanent codebase
+  - When in doubt about a file, ask the user or delete it if it's clearly temporary
+
 ## Prohibited Practices
 
 - ❌ Creating documentation files (README, MD, TXT, DOC) without explicit request
@@ -221,4 +233,5 @@ def test_function_name_failure() -> None:
 - ❌ Deep inheritance hierarchies (max 1 level)
 - ❌ Inline comments explaining obvious code
 - ❌ Writing large amounts of code without testing incrementally
+- ❌ Committing to git without explicit user request
 

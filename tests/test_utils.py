@@ -5,9 +5,9 @@ Tests for utility functions.
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from typing import List, Dict, Any
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time, date
 
-from src.utils import get_sp500_symbols, _is_valid_symbol, fetch_previous_day_5min_bars
+from src.utils import get_sp500_symbols, _is_valid_symbol, fetch_previous_day_5min_bars, get_last_trading_day
 
 
 class TestGetSp500Symbols:
@@ -354,4 +354,55 @@ class TestFetchPreviousDay5minBars:
         assert len(results["AAPL"]) == 1
         # INVALID should have empty list due to error
         assert results["INVALID"] == []
+
+
+class TestGetLastTradingDay:
+    """Test suite for get_last_trading_day function."""
+
+    def test_get_last_trading_day_weekday(self) -> None:
+        """Test that weekday dates return the previous trading day."""
+        # Monday - should return previous Friday
+        monday = date(2024, 1, 1)  # Jan 1, 2024 is a Monday
+        result = get_last_trading_day(monday)
+        assert result < monday  # Should be before Monday
+        assert result.weekday() < 5  # Should be a weekday
+        assert result.weekday() == 4  # Should be Friday
+        
+        # Friday - should return previous Thursday
+        friday = date(2024, 1, 5)  # Jan 5, 2024 is a Friday
+        result = get_last_trading_day(friday)
+        assert result < friday  # Should be before Friday
+        assert result.weekday() < 5  # Should be a weekday
+        assert result.weekday() == 3  # Should be Thursday
+
+    def test_get_last_trading_day_weekend(self) -> None:
+        """Test that weekend dates return the previous Friday."""
+        # Saturday
+        saturday = date(2024, 1, 6)  # Jan 6, 2024 is a Saturday
+        result = get_last_trading_day(saturday)
+        assert result.weekday() < 5  # Should be a weekday
+        assert result < saturday  # Should be before Saturday
+        
+        # Sunday
+        sunday = date(2024, 1, 7)  # Jan 7, 2024 is a Sunday
+        result = get_last_trading_day(sunday)
+        assert result.weekday() < 5  # Should be a weekday
+        assert result < sunday  # Should be before Sunday
+
+    def test_get_last_trading_day_none(self) -> None:
+        """Test that None uses today's date."""
+        result = get_last_trading_day(None)
+        assert isinstance(result, date)
+        assert result.weekday() < 5  # Should be a weekday
+
+    def test_get_last_trading_day_monday(self) -> None:
+        """Test that Monday returns the previous Friday."""
+        # If today is Monday, last trading day should be Friday
+        monday = date(2024, 1, 1)  # Monday
+        # Go back to find Friday
+        expected_friday = date(2023, 12, 29)  # Previous Friday
+        result = get_last_trading_day(monday)
+        # Should return Friday (the last complete trading day)
+        assert result == expected_friday
+        assert result.weekday() == 4  # Friday
 
