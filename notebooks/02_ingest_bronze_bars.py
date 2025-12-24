@@ -225,7 +225,6 @@ try:
     from pyspark.sql.functions import lit
     
     bronze_df = raw_df \
-        .withColumn("data_source", lit("yahoo_finance")) \
         .withColumn("ingestion_timestamp", lit(ingestion_timestamp)) \
         .withColumn("batch_id", lit(latest_date_dir))
     
@@ -248,7 +247,6 @@ except Exception as e:
         # Add metadata to each bar
         ingestion_timestamp = datetime.now()
         for bar in bars_data:
-            bar["data_source"] = "yahoo_finance"
             bar["ingestion_timestamp"] = ingestion_timestamp.isoformat()
             bar["batch_id"] = latest_date_dir
         
@@ -292,7 +290,6 @@ bronze_df = bronze_df.select(
     col("low").cast("double"),
     col("close").cast("double"),
     col("volume").cast("bigint"),
-    col("data_source").cast("string"),
     col("ingestion_timestamp").cast("timestamp"),
     col("batch_id").cast("string")
 )

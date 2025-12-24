@@ -154,7 +154,7 @@ External APIs (Yahoo Finance)
 **Key Features**:
 - **Spark JSON Reader**: Uses Spark's native JSON reader for efficient processing of large files (handles files of any size)
 - **Schema Enforcement**: Applies explicit Bronze schema with proper data types (timestamp, double, bigint)
-- **Metadata Addition**: Automatically adds ingestion metadata (data_source, ingestion_timestamp, batch_id)
+- **Metadata Addition**: Automatically adds ingestion metadata (ingestion_timestamp, batch_id)
 - **Idempotent MERGE**: Uses Delta Lake MERGE operations to prevent duplicates on re-runs
 - **Automatic Date Detection**: Finds most recent date directory or accepts date parameter
 - **Fallback Handling**: Falls back to Python JSON parsing if Spark reader fails (for edge cases)
@@ -444,7 +444,7 @@ It is not intended for live trading, real-time analytics, or production deployme
   - Spark-based JSON reading for large files
   - Explicit schema enforcement with proper data types
   - Delta Lake MERGE operations for idempotent processing
-  - Metadata enrichment (data_source, ingestion_timestamp, batch_id)
+  - Metadata enrichment (ingestion_timestamp, batch_id)
   - Unity Catalog and workspace file storage support
 
 * **Infrastructure**:
