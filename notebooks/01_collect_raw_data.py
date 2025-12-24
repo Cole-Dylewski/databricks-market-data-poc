@@ -285,7 +285,7 @@ try:
     
     # Create date-specific subdirectory
     date_str = last_trading_day.strftime("%Y%m%d")
-    date_path = f"{DATABRICKS_PATHS['raw_bars_path']}/{date_str}"
+    date_path = f"{DATABRICKS_PATHS['raw_bars_path']}"
     try:
         dbutils.fs.mkdirs(date_path)
     except Exception:

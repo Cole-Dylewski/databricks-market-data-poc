@@ -160,42 +160,42 @@ print("Spark session initialized with Delta Lake support")
 
 # COMMAND ----------
 
-# Get the most recent date directory, or use a specific date
+# Get the most recent timestamped file, or use a specific date
 # In production, you might pass the date as a parameter or use the most recent
 
 raw_bars_path = DATABRICKS_PATHS["raw_bars_path"]
 
-# List available date directories
+# List available timestamped JSON files
 try:
-    date_dirs = [f.name for f in dbutils.fs.ls(raw_bars_path) if f.isDir()]
-    if not date_dirs:
-        raise ValueError(f"No date directories found in {raw_bars_path}")
-    
-    # Use the most recent date (or you could pass this as a parameter)
-    latest_date_dir = sorted(date_dirs)[-1]
-    date_path = f"{raw_bars_path}/{latest_date_dir}"
-    
-    print(f"Reading raw data from: {date_path}")
-    print(f"Date: {latest_date_dir}")
-    
-    # Find the timestamped JSON file for this date
-    # Format: bars_YYYYMMDD.json
-    json_files = [f.path for f in dbutils.fs.ls(date_path) if f.name.startswith('bars_') and f.name.endswith('.json')]
+    # Find all timestamped JSON files (format: bars_YYYYMMDD.json)
+    json_files = [f.path for f in dbutils.fs.ls(raw_bars_path) if f.name.startswith('bars_') and f.name.endswith('.json')]
     
     if not json_files:
         # Fallback: look for any JSON files (for backward compatibility)
-        json_files = [f.path for f in dbutils.fs.ls(date_path) if f.name.endswith('.json')]
+        json_files = [f.path for f in dbutils.fs.ls(raw_bars_path) if f.name.endswith('.json')]
         if json_files:
-            print(f"[WARN] Found {len(json_files)} JSON files, but expected single timestamped file")
-            print(f"       Using first file: {json_files[0]}")
+            print(f"[WARN] Found {len(json_files)} JSON files, but expected timestamped files (bars_YYYYMMDD.json)")
+            print(f"       Using most recent file")
         else:
-            raise ValueError(f"No JSON files found in {date_path}")
-    else:
-        if len(json_files) > 1:
-            print(f"[WARN] Found {len(json_files)} timestamped files, using most recent")
-            json_files = [sorted(json_files)[-1]]
-        
-        print(f"Found timestamped data file: {json_files[0]}")
+            raise ValueError(f"No JSON files found in {raw_bars_path}")
+    
+    # Use the most recent file (extract date from filename)
+    if len(json_files) > 1:
+        # Sort by filename (which includes date) to get most recent
+        json_files = sorted(json_files)
+        print(f"[INFO] Found {len(json_files)} timestamped files, using most recent")
+    
+    latest_file = json_files[-1]
+    # Extract date from filename (bars_YYYYMMDD.json)
+    filename = Path(latest_file).name
+    date_str = filename.replace('bars_', '').replace('.json', '')
+    latest_date_dir = date_str
+    
+    print(f"Reading raw data from: {raw_bars_path}")
+    print(f"Selected file: {latest_file}")
+    print(f"Date: {latest_date_dir}")
+    
+    json_files = [latest_file]
     
 except Exception as e:
     print(f"[ERROR] Failed to read from volume: {e}")
