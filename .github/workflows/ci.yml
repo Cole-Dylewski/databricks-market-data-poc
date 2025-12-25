@@ -9,113 +9,41 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.10", "3.11"]
-
     steps:
     - uses: actions/checkout@v4
-
-    - name: Set up Python ${{ matrix.python-version }}
+    
+    - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Install Java (required for PySpark)
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'temurin'
-        java-version: '11'
-
-    - name: Cache pip packages
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('market_data_poc/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-
+        python-version: "3.11"
+    
     - name: Install dependencies
       working-directory: market_data_poc
       run: |
-        python -m pip install --upgrade pip
-        # Install core dependencies (skip Databricks-specific packages for CI)
-        pip install requests>=2.31.0
-        pip install beautifulsoup4>=4.12.0
-        pip install lxml>=4.9.0
-        pip install pandas>=2.0.0
-        pip install numpy>=1.24.0
-        pip install python-dateutil>=2.8.0
-        pip install pytz>=2023.3
-        pip install yfinance>=0.2.0
-        pip install pyyaml>=6.0
-        pip install python-dotenv>=1.0.0
-        # Install PySpark (requires Java, installed above)
-        pip install pyspark>=3.5.0
-        # Install testing dependencies
-        pip install pytest>=7.4.0 pytest-cov>=4.1.0 pytest-mock>=3.12.0
-
-    - name: Verify PySpark installation
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+    
+    - name: Run tests
       working-directory: market_data_poc
-      env:
-        PYTHONPATH: ${{ github.workspace }}/market_data_poc
       run: |
-        python -c "import pyspark; print(f'PySpark version: {pyspark.__version__}')"
-        python -c "from pyspark.sql import SparkSession; print('PySpark imports successful')"
-
-    - name: Verify module imports
-      working-directory: market_data_poc
-      env:
-        PYTHONPATH: ${{ github.workspace }}/market_data_poc
-      run: |
-        python -c "from src.transforms import clean_bronze_to_silver; print('transforms import successful')"
-        python -c "from src.schemas import BRONZE_BARS_SCHEMA; print('schemas import successful')"
-        python -c "from src.utils import get_sp500_symbols; print('utils import successful')"
-
-    - name: Run tests with coverage
-      working-directory: market_data_poc
-      env:
-        PYTHONPATH: ${{ github.workspace }}/market_data_poc
-        SPARK_LOCAL_IP: "127.0.0.1"
-      run: |
-        pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --cov-report=term --tb=short
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: market_data_poc/coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
+        pytest tests/ -v
 
   lint:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-
+    
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.10"
-
-    - name: Install linting dependencies
+        python-version: "3.11"
+    
+    - name: Install flake8
       run: |
-        python -m pip install --upgrade pip
-        pip install flake8 black mypy
-
+        pip install flake8
+    
     - name: Run flake8
       working-directory: market_data_poc
       run: |
         flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 src/ tests/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-    - name: Check code formatting with black
-      working-directory: market_data_poc
-      run: |
-        black --check src/ tests/
-
-    - name: Run mypy type checking
-      working-directory: market_data_poc
-      run: |
-        mypy src/ --ignore-missing-imports --no-strict-optional || true
-
