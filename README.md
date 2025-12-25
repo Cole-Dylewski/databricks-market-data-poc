@@ -48,13 +48,22 @@ The pipeline follows a standard Databricks lakehouse pattern:
 
 ## Technology Stack
 
+### Databricks Native Technologies
+* **Delta Live Tables (DLT)**: Declarative ETL framework for medallion architecture
+* **Unity Catalog**: Modern data governance and catalog management
+* **Auto Loader**: Automatic file detection and schema evolution for streaming
+* **Delta Lake**: ACID transactions, time travel, and schema evolution
+* **Databricks Workflows**: Orchestration and scheduling
+* **Databricks Asset Bundles**: Infrastructure as code
+* **Photon Engine**: High-performance query engine (optional)
+* **Auto-optimization**: Automatic table optimization (Z-ordering, compaction)
+
+### Core Technologies
 * Python
-* Apache Spark
+* Apache Spark (Databricks Runtime)
 * Delta Lake
-* Databricks (Free Edition)
-* Market Data Source:
-  * **Yahoo Finance** (✅ implemented, free, no API keys required) - using `yfinance` library
-* Web scraping for symbol lists using `beautifulsoup4` (S&P 500 symbols from stockanalysis.com)
+* Structured Streaming
+* **Yahoo Finance** (via `yfinance` library, free, no API keys required)
 * Web scraping for symbol lists using `beautifulsoup4` (S&P 500 symbols from stockanalysis.com)
 * Testing framework: `pytest` with comprehensive test coverage
 
@@ -392,10 +401,15 @@ This project showcases proficiency in:
 - **Schema Management**: Explicit schemas with type enforcement at each layer
 
 ### Databricks & Spark
-- **Delta Lake**: MERGE operations, schema evolution, time travel
-- **Spark DataFrames**: Efficient data processing with Spark SQL
+- **Delta Live Tables (DLT)**: Declarative ETL with automatic dependency management
+- **Delta Lake**: MERGE operations, schema evolution, time travel, auto-optimization
+- **Auto Loader**: Automatic file detection and streaming ingestion
 - **Unity Catalog**: Modern data governance and catalog management
-- **Job Orchestration**: Production-ready job scheduling and dependencies
+- **Structured Streaming**: Real-time data processing with exactly-once semantics
+- **Databricks Workflows**: Production-ready job orchestration and scheduling
+- **Databricks Asset Bundles**: Infrastructure as code for deployments
+- **Photon Engine**: High-performance query acceleration (optional)
+- **Auto-optimization**: Automatic Z-ordering and compaction
 
 ### Python Development
 - **Type Safety**: Strict type hints throughout codebase
@@ -460,11 +474,41 @@ It is not intended for live trading, real-time analytics, or production deployme
   - Idempotent operations throughout
   - Configuration-driven design
 
+### ✅ Completed
+* **Silver Layer Transformations**:
+  - Schema enforcement and type casting
+  - Deduplication (keeps most recent by ingestion_timestamp)
+  - Data quality validation (price relationships, volume checks)
+  - Quality scoring algorithm (completeness, consistency, reasonableness)
+  - Valid/invalid record flagging
+  - Incremental processing support
+  - Idempotent Delta MERGE operations
+  
+* **Gold Layer Analytics**:
+  - Daily OHLCV aggregation from intraday bars
+  - Calculated metrics (daily_return, price_range, avg_price)
+  - Technical indicators (SMA 5, 20, 50-day moving averages)
+  - Volatility calculation (stddev of returns over 20-day window)
+  - Incremental processing with window function recalculation
+  - Idempotent Delta MERGE operations
+  
+* **Data Quality Checks Framework**:
+  - Bronze layer validation (nulls, ranges, completeness)
+  - Silver layer quality metrics (quality scores, validity checks)
+  - Gold layer consistency checks (indicator completeness, relationships)
+  - Cross-layer consistency validation (symbol and date range checks)
+  - Comprehensive quality reporting
+
+* **Transformation Functions** (`src/transforms.py`):
+  - `clean_bronze_to_silver()`: Complete Bronze to Silver transformation
+  - `aggregate_to_daily_ohlcv()`: Daily aggregation with metrics
+  - `calculate_technical_indicators()`: Technical indicator calculations
+  - Helper functions for incremental processing
+
 ### 🚧 In Progress / Planned
-* Silver layer transformations (deduplication, cleaning, normalization)
-* Gold layer analytics (daily aggregations, technical indicators)
-* Data quality checks framework
 * Databricks Jobs orchestration (can be configured manually)
+* Additional technical indicators (RSI, MACD, Bollinger Bands)
+* Performance optimizations (partitioning, z-ordering)
 
 ### 📋 Future Enhancements
 * Structured Streaming for real-time ingestion
