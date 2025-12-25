@@ -18,12 +18,26 @@ jobs:
         python-version: "3.11"
     
     - name: Install dependencies
+      env:
+        DATABRICKS_HOST: ""
+        DATABRICKS_TOKEN: ""
+        SPARK_REMOTE: ""
       run: |
         pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-cov
+        # Install dependencies but skip databricks-connect for CI
+        pip install pyspark>=3.5.0 delta-spark>=3.0.0
+        pip install requests>=2.31.0 urllib3>=2.0.0 beautifulsoup4>=4.12.0 lxml>=4.9.0
+        pip install pandas>=2.0.0 numpy>=1.24.0
+        pip install python-dateutil>=2.8.0 pytz>=2023.3
+        pip install yfinance>=0.2.0
+        pip install pyyaml>=6.0 python-dotenv>=1.0.0
+        pip install pytest pytest-cov pytest-mock
     
     - name: Run tests
+      env:
+        DATABRICKS_HOST: ""
+        DATABRICKS_TOKEN: ""
+        SPARK_REMOTE: ""
       run: |
         pytest tests/ -v
 

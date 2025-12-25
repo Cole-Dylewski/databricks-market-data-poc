@@ -30,12 +30,29 @@ from src.transforms import (
 @pytest.fixture(scope="module")
 def spark():
     """Create a SparkSession for testing."""
+    import os
+    import sys
+    
+    # Disable Databricks Connect for local testing
+    os.environ.pop("DATABRICKS_HOST", None)
+    os.environ.pop("DATABRICKS_TOKEN", None)
+    os.environ.pop("SPARK_REMOTE", None)
+    os.environ["DATABRICKS_RUNTIME_VERSION"] = ""  # Disable Databricks runtime detection
+    
+    # Prevent databricks-connect from being imported if installed
+    # This ensures we use local PySpark, not Databricks Connect
+    if "databricks.connect" in sys.modules:
+        del sys.modules["databricks.connect"]
+    
+    # Force local Spark mode - explicitly use SparkSession, not DatabricksSession
     spark = (
         SparkSession.builder.master("local[1]")
         .appName("test_transforms")
         .config("spark.sql.adaptive.enabled", "false")
         .config("spark.driver.host", "127.0.0.1")
         .config("spark.driver.bindAddress", "127.0.0.1")
+        .config("spark.databricks.service.address", "")  # Disable Databricks Connect
+        .config("spark.databricks.service.token", "")  # Disable Databricks Connect
         .getOrCreate()
     )
     yield spark
