@@ -19,7 +19,7 @@ except ImportError:
     )
 
 # Verify yfinance is being used (not requests directly)
-if not hasattr(yf, 'Ticker'):
+if not hasattr(yf, "Ticker"):
     raise ImportError(
         "yfinance library is not properly installed or is the wrong version. "
         "Expected yfinance>=0.2.0 with Ticker class."
@@ -30,7 +30,7 @@ from .base_client import BaseMarketDataClient
 
 class YahooFinanceClient(BaseMarketDataClient):
     """Client for fetching data from Yahoo Finance using yfinance library.
-    
+
     Uses the yfinance library which wraps Yahoo Finance's public API.
     More reliable than direct REST API calls and handles rate limiting better.
     No API keys required.
@@ -38,7 +38,7 @@ class YahooFinanceClient(BaseMarketDataClient):
 
     def __init__(self) -> None:
         """Initialize Yahoo Finance client.
-        
+
         Examples:
             >>> client = YahooFinanceClient()
         """
@@ -46,13 +46,13 @@ class YahooFinanceClient(BaseMarketDataClient):
 
     def _convert_interval(self, interval: str) -> str:
         """Convert standard interval to yfinance format.
-        
+
         Args:
             interval: Standard interval (e.g., "1d", "1h", "5m")
-        
+
         Returns:
             yfinance compatible interval string
-        
+
         Examples:
             >>> client = YahooFinanceClient()
             >>> client._convert_interval("1d")
@@ -61,7 +61,21 @@ class YahooFinanceClient(BaseMarketDataClient):
             '5m'
         """
         # yfinance supports: 1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo
-        valid_intervals = ["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "5d", "1wk", "1mo", "3mo"]
+        valid_intervals = [
+            "1m",
+            "2m",
+            "5m",
+            "15m",
+            "30m",
+            "60m",
+            "90m",
+            "1h",
+            "1d",
+            "5d",
+            "1wk",
+            "1mo",
+            "3mo",
+        ]
         if interval not in valid_intervals:
             return "1d"
         return interval
@@ -74,23 +88,23 @@ class YahooFinanceClient(BaseMarketDataClient):
         interval: str = "1d",
     ) -> List[Dict[str, Any]]:
         """Fetch bar data from Yahoo Finance using yfinance library only.
-        
+
         This method ONLY uses yfinance library - no direct REST API calls.
         yfinance handles all HTTP requests internally.
-        
+
         Args:
             symbol: Stock symbol (e.g., "AAPL", "MSFT")
             start_time: Start datetime for data range
             end_time: End datetime for data range
             interval: Bar interval (default: "1d")
-        
+
         Returns:
             List of bar dictionaries with OHLCV data
-        
+
         Raises:
             ValueError: If symbol is empty or time range is invalid
             ConnectionError: If API request fails
-        
+
         Examples:
             >>> client = YahooFinanceClient()
             >>> start = datetime(2024, 1, 1)
@@ -103,18 +117,18 @@ class YahooFinanceClient(BaseMarketDataClient):
         """
         if not symbol or not symbol.strip():
             raise ValueError("Symbol cannot be empty")
-        
+
         if start_time >= end_time:
             raise ValueError("start_time must be before end_time")
-        
+
         yfinance_interval = self._convert_interval(interval)
-        
+
         try:
             # ONLY use yfinance - no REST API calls
             # yfinance.Ticker() creates a ticker object
             # ticker.history() downloads data using yfinance's internal HTTP handling
             ticker = yf.Ticker(symbol)
-            
+
             # Fetch historical data using yfinance
             # yfinance handles all HTTP requests, retries, and rate limiting internally
             # This is the ONLY way we fetch data - no direct REST API calls
@@ -123,10 +137,10 @@ class YahooFinanceClient(BaseMarketDataClient):
                 end=end_time,
                 interval=yfinance_interval,
             )
-            
+
             # Convert pandas DataFrame to list of dictionaries
             return self._dataframe_to_bars(symbol, df)
-            
+
         except Exception as e:
             error_msg = str(e)
             # Provide clearer error messages
@@ -141,17 +155,17 @@ class YahooFinanceClient(BaseMarketDataClient):
 
     def _dataframe_to_bars(self, symbol: str, df: pd.DataFrame) -> List[Dict[str, Any]]:
         """Convert pandas DataFrame from yfinance to standardized bar format.
-        
+
         Args:
             symbol: Stock symbol
             df: pandas DataFrame from yfinance with OHLCV data
-        
+
         Returns:
             List of standardized bar dictionaries
         """
         if df.empty:
             return []
-        
+
         bars = []
         for timestamp, row in df.iterrows():
             # Handle pandas Timestamp
@@ -159,28 +173,30 @@ class YahooFinanceClient(BaseMarketDataClient):
                 bar_timestamp = timestamp.to_pydatetime()
             else:
                 bar_timestamp = datetime.fromtimestamp(timestamp.timestamp())
-            
-            bars.append({
-                "symbol": symbol,
-                "timestamp": bar_timestamp,
-                "open": float(row["Open"]) if pd.notna(row["Open"]) else 0.0,
-                "high": float(row["High"]) if pd.notna(row["High"]) else 0.0,
-                "low": float(row["Low"]) if pd.notna(row["Low"]) else 0.0,
-                "close": float(row["Close"]) if pd.notna(row["Close"]) else 0.0,
-                "volume": int(row["Volume"]) if pd.notna(row["Volume"]) else 0,
-            })
-        
+
+            bars.append(
+                {
+                    "symbol": symbol,
+                    "timestamp": bar_timestamp,
+                    "open": float(row["Open"]) if pd.notna(row["Open"]) else 0.0,
+                    "high": float(row["High"]) if pd.notna(row["High"]) else 0.0,
+                    "low": float(row["Low"]) if pd.notna(row["Low"]) else 0.0,
+                    "close": float(row["Close"]) if pd.notna(row["Close"]) else 0.0,
+                    "volume": int(row["Volume"]) if pd.notna(row["Volume"]) else 0,
+                }
+            )
+
         return bars
 
     def get_available_symbols(self) -> List[str]:
         """Get list of available symbols.
-        
+
         Note: Yahoo Finance doesn't provide a public endpoint for this.
         This method returns common symbols as a fallback.
-        
+
         Returns:
             List of common stock symbols
-        
+
         Examples:
             >>> client = YahooFinanceClient()
             >>> symbols = client.get_available_symbols()
@@ -188,8 +204,26 @@ class YahooFinanceClient(BaseMarketDataClient):
             True
         """
         return [
-            "AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "NVDA",
-            "JPM", "V", "JNJ", "WMT", "PG", "MA", "UNH", "HD",
-            "DIS", "BAC", "ADBE", "NFLX", "CRM", "PYPL", "INTC",
+            "AAPL",
+            "MSFT",
+            "GOOGL",
+            "AMZN",
+            "META",
+            "TSLA",
+            "NVDA",
+            "JPM",
+            "V",
+            "JNJ",
+            "WMT",
+            "PG",
+            "MA",
+            "UNH",
+            "HD",
+            "DIS",
+            "BAC",
+            "ADBE",
+            "NFLX",
+            "CRM",
+            "PYPL",
+            "INTC",
         ]
-

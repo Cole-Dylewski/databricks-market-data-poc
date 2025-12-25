@@ -20,17 +20,14 @@ DATABRICKS_PATHS_VOLUMES: Dict[str, str] = {
     "raw_volume": "/Volumes/main/default/raw_market_data",
     "raw_bars_path": "/Volumes/main/default/raw_market_data/bars",
     "raw_symbols_path": "/Volumes/main/default/raw_market_data/symbols",
-    
     # Delta table paths (medallion layers)
     "bronze_catalog": "main",
     "bronze_schema": "bronze",
     "bronze_bars_table": "main.bronze.bars",
     "bronze_symbols_table": "main.bronze.symbols",
-    
     "silver_catalog": "main",
     "silver_schema": "silver",
     "silver_bars_table": "main.silver.bars",
-    
     "gold_catalog": "main",
     "gold_schema": "gold",
     "gold_daily_ohlcv_table": "main.gold.daily_ohlcv",
@@ -43,7 +40,6 @@ DATABRICKS_PATHS_WORKSPACE: Dict[str, str] = {
     # Workspace file paths (raw landing zone)
     "raw_bars_path": "/Workspace/raw_market_data/bars",
     "raw_symbols_path": "/Workspace/raw_market_data/symbols",
-    
     # Delta table paths using workspace files
     "bronze_bars_table": "delta.`/Workspace/bronze/bars`",
     "bronze_symbols_table": "delta.`/Workspace/bronze/symbols`",
