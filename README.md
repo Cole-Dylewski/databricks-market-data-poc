@@ -28,27 +28,117 @@ The project uses Yahoo Finance as the sole data source, which requires no API ke
 
 ## Architecture
 
-The pipeline follows a standard Databricks lakehouse pattern:
+The pipeline follows a standard Databricks lakehouse pattern with a medallion architecture (Bronze → Silver → Gold).
+
+### Data Flow Diagram
+
+```mermaid
+erDiagram
+    RAW_FILES ||--o{ BRONZE_BARS : "Auto Loader\nStreaming"
+    BRONZE_BARS ||--|| SILVER_BARS : "Clean & Deduplicate"
+    SILVER_BARS ||--|| GOLD_DAILY_OHLCV : "Aggregate Daily"
+    GOLD_DAILY_OHLCV ||--|| GOLD_ANALYTICS : "Calculate Indicators"
+    
+    BRONZE_BARS {
+        string symbol PK
+        timestamp timestamp PK
+        double open
+        double high
+        double low
+        double close
+        bigint volume
+        timestamp ingestion_timestamp
+        string batch_id
+    }
+    
+    SILVER_BARS {
+        string symbol PK
+        timestamp timestamp PK
+        double open "non-null"
+        double high "non-null"
+        double low "non-null"
+        double close "non-null"
+        bigint volume "non-null"
+        timestamp processed_timestamp
+        int is_valid
+        double quality_score
+    }
+    
+    GOLD_DAILY_OHLCV {
+        string symbol PK
+        timestamp trade_date PK
+        double open
+        double high
+        double low
+        double close
+        bigint volume
+        int num_bars
+        double daily_return
+        double price_range
+        double avg_price
+        timestamp updated_timestamp
+    }
+    
+    GOLD_ANALYTICS {
+        string symbol PK
+        timestamp trade_date PK
+        double sma_5
+        double sma_20
+        double sma_50
+        double volatility
+        timestamp updated_timestamp
+    }
+```
+
+### Pipeline Flow
+
+```mermaid
+flowchart TD
+    A[Yahoo Finance API] -->|5-minute bars| B[Raw JSON Files<br/>Landing Zone]
+    B -->|Auto Loader<br/>Streaming| C[Bronze Layer<br/>main.bronze.bars]
+    C -->|Clean & Deduplicate<br/>Quality Scoring| D[Silver Layer<br/>main.silver.bars]
+    D -->|Aggregate Daily<br/>OHLCV| E[Gold Daily OHLCV<br/>main.gold.daily_ohlcv]
+    E -->|Calculate Indicators<br/>SMAs & Volatility| F[Gold Analytics<br/>main.gold.analytics]
+    
+    style C fill:#cd7f32
+    style D fill:#c0c0c0
+    style E fill:#ffd700
+    style F fill:#ffd700
+```
 
 ### Bronze Layer (Raw Ingestion)
 
 * Data is pulled from Yahoo Finance using the `yfinance` library
-* Raw records are ingested with minimal transformation
-* Metadata such as ingestion timestamp and data source are added
+* Raw records are ingested with minimal transformation via **Auto Loader streaming**
+* Metadata such as ingestion timestamp and batch_id are added
 * Data is written append-only to Delta tables
+* **Table**: `main.bronze.bars`
+* **Key Fields**: `symbol`, `timestamp`, `batch_id` (composite key)
 
 ### Silver Layer (Cleaned & Normalized)
 
-* Schema enforcement and type casting
-* Deduplication based on symbol and timestamp
+* Schema enforcement and type casting (all OHLCV fields non-nullable)
+* Deduplication based on `symbol` and `timestamp` (keeps most recent)
+* Data quality validation and scoring
 * Standardized column names and data types
 * Idempotent processing using Delta MERGE operations
+* **Table**: `main.silver.bars`
+* **Key Fields**: `symbol`, `timestamp` (composite key)
+* **Quality Metrics**: `is_valid`, `quality_score`
 
 ### Gold Layer (Analytics & Aggregates)
 
-* Daily OHLCV aggregations per symbol
-* Simple technical indicators (e.g., moving averages, returns)
-* Analytics-ready tables optimized for querying and visualization
+#### Daily OHLCV Table
+* Aggregates intraday 5-minute bars to daily OHLCV per symbol
+* Calculates daily_return, price_range, avg_price
+* **Table**: `main.gold.daily_ohlcv`
+* **Key Fields**: `symbol`, `trade_date` (composite key)
+
+#### Analytics Table
+* Technical indicators: SMA 5, 20, 50-day moving averages
+* Volatility calculation (stddev of returns)
+* **Table**: `main.gold.analytics`
+* **Key Fields**: `symbol`, `trade_date` (composite key)
 
 ---
 
