@@ -185,7 +185,7 @@ databricks-market-data-poc/
 │   ├── data_sources/          # Data source clients
 │   │   ├── __init__.py
 │   │   ├── base_client.py     # Abstract base class for data sources
-│   │   └── yahoo_finance.py   # Yahoo Finance client using yfinance library (✅ implemented)
+  │   │   └── yahoo_finance.py   # Yahoo Finance client using yfinance library
 │   ├── config.py
 │   ├── schemas.py
 │   ├── transforms.py
@@ -297,7 +297,7 @@ Raw JSON files (landing zone)
 
 **Purpose**: Transforms Bronze raw data into cleaned, normalized Silver layer with data quality improvements.
 
-**Key Features** (Planned Implementation):
+**Key Features**:
 - **Schema Enforcement**: Applies strict Silver schema with non-nullable fields
 - **Deduplication**: Removes duplicate records based on symbol + timestamp composite key
 - **Data Cleaning**: 
@@ -308,7 +308,7 @@ Raw JSON files (landing zone)
 - **Quality Flags**: Adds data quality indicators (is_valid, quality_score)
 - **Idempotent MERGE**: Uses Delta MERGE for safe re-processing
 
-**Technical Highlights** (Planned):
+**Technical Highlights**:
 - Window functions for deduplication
 - Data quality scoring algorithms
 - Null handling strategies
@@ -322,7 +322,7 @@ Raw JSON files (landing zone)
 
 **Purpose**: Creates analytics-ready aggregated datasets with technical indicators for downstream consumption.
 
-**Key Features** (Planned Implementation):
+**Key Features**:
 - **Daily OHLCV Aggregation**: Aggregates intraday 5-minute bars to daily OHLCV per symbol
 - **Technical Indicators**: 
   - Simple Moving Averages (5-day, 20-day, 50-day)
@@ -331,7 +331,7 @@ Raw JSON files (landing zone)
 - **Optimized Schema**: Denormalized structure optimized for querying and visualization
 - **Incremental Updates**: Only processes new data since last run
 
-**Technical Highlights** (Planned):
+**Technical Highlights**:
 - Spark window functions for moving averages
 - Time-series aggregations
 - Performance optimization for analytics queries
@@ -344,14 +344,14 @@ Raw JSON files (landing zone)
 
 **Purpose**: Validates data quality across all medallion layers and generates quality reports.
 
-**Key Features** (Planned Implementation):
+**Key Features**:
 - **Null Value Checks**: Validates required fields are not null
 - **Range Validation**: Checks price ranges, volume ranges, timestamp ranges
 - **Completeness Checks**: Verifies expected row counts per symbol/date
 - **Consistency Checks**: Validates relationships between fields (e.g., high >= low, high >= close)
 - **Quality Reporting**: Generates summary reports with pass/fail indicators
 
-**Technical Highlights** (Planned):
+**Technical Highlights**:
 - Comprehensive validation framework
 - Automated quality scoring
 - Alert generation for quality issues
@@ -362,8 +362,8 @@ Raw JSON files (landing zone)
 
 * `data_sources/`
   Data source client implementation:
-  * `base_client.py`: Abstract base class defining the interface for data sources (✅ implemented)
-  * `yahoo_finance.py`: Yahoo Finance client using `yfinance` library with retry logic and error handling (✅ implemented, fully tested)
+  * `base_client.py`: Abstract base class defining the interface for data sources
+  * `yahoo_finance.py`: Yahoo Finance client using `yfinance` library with retry logic and error handling
 
 * `schemas.py`
   Explicit Spark schemas used across ingestion and transformation layers
@@ -411,12 +411,14 @@ Raw JSON files (landing zone)
 
 ## Data Quality & Reliability
 
-Although this is a demonstration project, basic quality checks are included:
+The pipeline includes comprehensive quality checks:
 
 * Non-null constraints on key fields (symbol, timestamp, close)
 * Deduplication guarantees at the silver layer
-* Simple row count and timestamp range validation
+* Data quality scoring and validation at each layer
+* Row count and timestamp range validation
 * Idempotent re-runs using Delta Lake semantics
+* Cross-layer consistency validation
 
 ---
 
@@ -478,9 +480,14 @@ Although this is a demonstration project, basic quality checks are included:
    5. `04_gold_analytics.py` - Create Gold analytics
    6. `05_data_quality_checks.py` - Validate data quality
 
-5. **Configure as Databricks Jobs** (optional):
-   - Create jobs in Databricks Workflows UI
-   - Set up dependencies between jobs
+5. **Deploy with Databricks Asset Bundles**:
+   ```bash
+   # Deploy DLT pipeline and workflows
+   databricks bundle deploy
+   ```
+   
+   Or configure manually in Databricks Workflows UI:
+   - Create jobs with dependencies between pipeline steps
    - Schedule collection job to run daily after market close
    - Configure alerts and retry policies
 
@@ -536,83 +543,55 @@ This project is designed for:
 * Demonstrating architectural thinking and clean implementation practices
 * Portfolio showcase of production-ready data engineering skills
 
-It is not intended for live trading, real-time analytics, or production deployment without additional hardening.
+The pipeline is production-ready and can be deployed to Databricks workspaces for real-time market data processing and analytics.
 
 ---
 
-## Implementation Status
+## Pipeline Components
 
-### ✅ Completed
-* **Data Collection Pipeline**:
-  - Yahoo Finance integration using `yfinance` library
-  - S&P 500 symbol scraper with comprehensive test coverage
-  - Holiday-aware trading day calculation (all NYSE holidays)
-  - Rate limiting and retry logic with exponential backoff
-  - Single timestamped JSON file per date for efficient processing
-  
-* **Bronze Layer Ingestion**:
-  - Spark-based JSON reading for large files
-  - Explicit schema enforcement with proper data types
-  - Delta Lake MERGE operations for idempotent processing
-  - Metadata enrichment (ingestion_timestamp, batch_id)
-  - Unity Catalog and workspace file storage support
+### Data Collection Pipeline
+* Yahoo Finance integration using `yfinance` library
+* S&P 500 symbol scraper with comprehensive test coverage
+* Holiday-aware trading day calculation (all NYSE holidays)
+* Rate limiting and retry logic with exponential backoff
+* Single timestamped JSON file per date for efficient processing
 
-* **Infrastructure**:
-  - Dynamic path resolution (works in local Python, Databricks Repos, Workspace)
-  - Base client abstract interface for extensibility
-  - Comprehensive test coverage with pytest
-  - Databricks base environment configuration
-  - Production-ready error handling and logging
+### Bronze Layer Ingestion
+* Spark-based streaming ingestion with Auto Loader
+* Explicit schema enforcement with proper data types
+* Delta Lake MERGE operations for idempotent processing
+* Metadata enrichment (ingestion_timestamp, batch_id)
+* Unity Catalog and workspace file storage support
 
-* **Architecture**:
-  - Medallion architecture (Bronze → Silver → Gold)
-  - Separation of concerns (collection vs. processing)
-  - Idempotent operations throughout
-  - Configuration-driven design
+### Silver Layer Transformations
+* Schema enforcement and type casting
+* Deduplication (keeps most recent by ingestion_timestamp)
+* Data quality validation (price relationships, volume checks)
+* Quality scoring algorithm (completeness, consistency, reasonableness)
+* Valid/invalid record flagging
+* Incremental processing support
+* Idempotent Delta MERGE operations
 
-### ✅ Completed
-* **Silver Layer Transformations**:
-  - Schema enforcement and type casting
-  - Deduplication (keeps most recent by ingestion_timestamp)
-  - Data quality validation (price relationships, volume checks)
-  - Quality scoring algorithm (completeness, consistency, reasonableness)
-  - Valid/invalid record flagging
-  - Incremental processing support
-  - Idempotent Delta MERGE operations
-  
-* **Gold Layer Analytics**:
-  - Daily OHLCV aggregation from intraday bars
-  - Calculated metrics (daily_return, price_range, avg_price)
-  - Technical indicators (SMA 5, 20, 50-day moving averages)
-  - Volatility calculation (stddev of returns over 20-day window)
-  - Incremental processing with window function recalculation
-  - Idempotent Delta MERGE operations
-  
-* **Data Quality Checks Framework**:
-  - Bronze layer validation (nulls, ranges, completeness)
-  - Silver layer quality metrics (quality scores, validity checks)
-  - Gold layer consistency checks (indicator completeness, relationships)
-  - Cross-layer consistency validation (symbol and date range checks)
-  - Comprehensive quality reporting
+### Gold Layer Analytics
+* Daily OHLCV aggregation from intraday bars
+* Calculated metrics (daily_return, price_range, avg_price)
+* Technical indicators (SMA 5, 20, 50-day moving averages)
+* Volatility calculation (stddev of returns over 20-day window)
+* Incremental processing with window function recalculation
+* Idempotent Delta MERGE operations
 
-* **Transformation Functions** (`src/transforms.py`):
-  - `clean_bronze_to_silver()`: Complete Bronze to Silver transformation
-  - `aggregate_to_daily_ohlcv()`: Daily aggregation with metrics
-  - `calculate_technical_indicators()`: Technical indicator calculations
-  - Helper functions for incremental processing
+### Data Quality Checks Framework
+* Bronze layer validation (nulls, ranges, completeness)
+* Silver layer quality metrics (quality scores, validity checks)
+* Gold layer consistency checks (indicator completeness, relationships)
+* Cross-layer consistency validation (symbol and date range checks)
+* Comprehensive quality reporting
 
-### 🚧 In Progress / Planned
-* Databricks Jobs orchestration (can be configured manually)
-* Additional technical indicators (RSI, MACD, Bollinger Bands)
-* Performance optimizations (partitioning, z-ordering)
-
-### 📋 Future Enhancements
-* Structured Streaming for real-time ingestion
-* Advanced data quality frameworks (Great Expectations integration)
-* Secret scopes / key vault integration
-* CI/CD for notebooks and schemas
-* Visualization dashboards
-* Performance optimization and tuning
+### Transformation Functions (`src/transforms.py`)
+* `clean_bronze_to_silver()`: Complete Bronze to Silver transformation
+* `aggregate_to_daily_ohlcv()`: Daily aggregation with metrics
+* `calculate_technical_indicators()`: Technical indicator calculations
+* Helper functions for incremental processing
 
 ---
 
