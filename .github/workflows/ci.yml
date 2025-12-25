@@ -78,8 +78,7 @@ jobs:
         PYTHONPATH: ${{ github.workspace }}/market_data_poc
         SPARK_LOCAL_IP: "127.0.0.1"
       run: |
-        pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --cov-report=term --tb=short || true
-        # Run tests and continue even if some fail to see all errors
+        pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --cov-report=term --tb=short
 
     - name: Upload coverage to Codecov
       working-directory: market_data_poc
