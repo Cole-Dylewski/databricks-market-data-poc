@@ -275,6 +275,8 @@ def get_incremental_bronze_data(
     Returns:
         DataFrame with incremental bronze data
     """
+    from pyspark.sql.functions import col, lit
+    
     bronze_df = spark.table(bronze_table)
     
     if last_processed_timestamp:

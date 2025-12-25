@@ -29,6 +29,8 @@ def spark():
         .master("local[1]") \
         .appName("test_transforms") \
         .config("spark.sql.adaptive.enabled", "false") \
+        .config("spark.driver.host", "127.0.0.1") \
+        .config("spark.driver.bindAddress", "127.0.0.1") \
         .getOrCreate()
     yield spark
     spark.stop()

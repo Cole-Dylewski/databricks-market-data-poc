@@ -55,12 +55,21 @@ jobs:
         # Install testing dependencies
         pip install pytest>=7.4.0 pytest-cov>=4.1.0 pytest-mock>=3.12.0
 
-    - name: Run tests with coverage
+    - name: Verify PySpark installation
       working-directory: market_data_poc
       env:
         PYTHONPATH: ${{ github.workspace }}/market_data_poc
       run: |
-        pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --cov-report=term
+        python -c "import pyspark; print(f'PySpark version: {pyspark.__version__}')"
+        python -c "from pyspark.sql import SparkSession; print('PySpark imports successful')"
+
+    - name: Run tests with coverage
+      working-directory: market_data_poc
+      env:
+        PYTHONPATH: ${{ github.workspace }}/market_data_poc
+        SPARK_LOCAL_IP: "127.0.0.1"
+      run: |
+        pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --cov-report=term --tb=short
 
     - name: Upload coverage to Codecov
       working-directory: market_data_poc
