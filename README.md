@@ -497,6 +497,14 @@ The pipeline includes comprehensive quality checks:
    - Schedule collection job to run daily after market close
    - Configure alerts and retry policies
 
+6. **Explore Examples and Documentation**:
+   - **SQL Queries**: `examples/example_queries.sql` - 10+ analytics use cases
+   - **Dashboard Queries**: `examples/dashboard_queries.sql` - Visualization-ready queries
+   - **Performance Guide**: `docs/PERFORMANCE.md` - Optimization strategies
+   - **Monitoring Guide**: `docs/MONITORING.md` - DLT and job monitoring
+   - **Troubleshooting**: `docs/TROUBLESHOOTING.md` - Common issues and solutions
+   - **Logging Guide**: `docs/LOGGING.md` - Structured logging best practices
+
 ---
 
 ## Technical Skills Demonstrated
